@@ -9,6 +9,7 @@ Route::inertia('/', 'welcome', [
 
 Route::prefix(config('app.admin_url', 'admin'))->middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::inertia('support', 'support/index')->name('support');
 });
 
 require __DIR__.'/settings.php';
