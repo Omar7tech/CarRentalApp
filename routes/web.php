@@ -7,7 +7,7 @@ Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
-Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
+Route::prefix(config('app.admin_url', 'admin'))->middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 });
 
