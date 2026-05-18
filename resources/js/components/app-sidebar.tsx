@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, LayoutGrid } from 'lucide-react';
+import { BookOpen, Info, LayoutGrid } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -28,7 +28,7 @@ const footerNavItems: NavItem[] = [
     {
         title: 'Support',
         href: support(),
-        icon: BookOpen,
+        icon: Info,
     },
 ];
 
