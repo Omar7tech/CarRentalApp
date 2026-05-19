@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Info, LayoutGrid } from 'lucide-react';
+import { Cuboid, Info, LayoutGrid } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -15,12 +15,18 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard, support } from '@/routes';
 import type { NavItem } from '@/types';
+import brands from '@/routes/brands';
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Brands',
+        href: brands.index().url,
+        icon: Cuboid,
     },
 ];
 
