@@ -27,21 +27,21 @@ function BrandLogo({ logo, name }: { logo: string; name: string }) {
 
   if (!logo || error) {
     return (
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-[11px] font-semibold text-muted-foreground ring-1 ring-border">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 text-xs font-bold text-primary">
         {initials}
       </div>
     );
   }
 
   return (
-    <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/50 ring-1 ring-border dark:bg-white/50">
-      {!loaded && <div className="absolute inset-0 animate-pulse rounded-md bg-muted" />}
+    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+      {!loaded && <div className="absolute inset-0 animate-pulse rounded-lg bg-muted/50" />}
       <img
         src={logo}
         alt={name}
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
-        className={`h-6 w-6 object-contain transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        className={`h-8 w-8 object-contain transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
       />
     </div>
   );
