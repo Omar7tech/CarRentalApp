@@ -61,7 +61,14 @@ class BrandController extends Controller
      */
     public function update(Request $request, Brand $brand)
     {
-        //
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'show_on_website' => ['boolean'],
+        ]);
+
+        $brand->update($validated);
+
+        return back();
     }
 
     /**
@@ -69,7 +76,9 @@ class BrandController extends Controller
      */
     public function destroy(Brand $brand)
     {
-        //
+        $brand->delete();
+
+        return back();
     }
 
     public function toggleShowOnWebsite(Brand $brand)

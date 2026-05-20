@@ -4,7 +4,7 @@ import { Brand, PaginatedBrands } from '@/types';
 import { dashboard } from '@/routes';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Globe, MoreHorizontalIcon, XIcon } from 'lucide-react';
+import { Globe, MoreHorizontalIcon, XIcon, Pencil, Trash2 } from 'lucide-react';
 import { DataPagination } from '@/components/data-pagination';
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
@@ -15,6 +15,9 @@ import BrandController from '@/actions/App/Http/Controllers/BrandController';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useTableFilters } from '@/hooks/use-table-filters';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
 
 function BrandLogo({ logo, name }: { logo: string; name: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -49,6 +52,60 @@ export default function Brands({ brands }: { brands: PaginatedBrands }) {
     route: BrandController.index(),
     only: ['brands'],
   });
+
+  const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [deletingBrand, setDeletingBrand] = useState<Brand | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', show_on_website: false });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function handleEdit(brand: Brand) {
+    setEditingBrand(brand);
+    setEditForm({
+      name: brand.name,
+      show_on_website: brand.show_on_website,
+    });
+  }
+
+  function handleUpdateSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingBrand) return;
+
+    setIsSubmitting(true);
+    router.put(
+      BrandController.update(editingBrand.slug),
+      editForm,
+      {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['brands'],
+        onSuccess: () => {
+          setEditingBrand(null);
+          setIsSubmitting(false);
+        },
+        onError: () => {
+          setIsSubmitting(false);
+        },
+      }
+    );
+  }
+
+  function handleDelete() {
+    if (!deletingBrand) return;
+
+    setIsSubmitting(true);
+    router.delete(BrandController.destroy(deletingBrand.slug), {
+      preserveState: true,
+      preserveScroll: true,
+      only: ['brands'],
+      onSuccess: () => {
+        setDeletingBrand(null);
+        setIsSubmitting(false);
+      },
+      onError: () => {
+        setIsSubmitting(false);
+      },
+    });
+  }
 
   function handleToggleShowOnWebsite(brand: Brand) {
     router.post(
@@ -117,7 +174,8 @@ export default function Brands({ brands }: { brands: PaginatedBrands }) {
             <Spinner role="status" className="size-10" />
           </div>
         ) : (
-          <Table>
+          <div className="rounded-md border bg-card">
+            <Table>
             <TableCaption>A list of your brands.</TableCaption>
             <TableHeader>
               <TableRow>
@@ -128,42 +186,58 @@ export default function Brands({ brands }: { brands: PaginatedBrands }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {brands.data.map((brand) => (
-                <TableRow key={brand.slug}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <BrandLogo logo={brand.logo} name={brand.name} />
-                      <span className="font-medium">{brand.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={brand.show_on_website}
-                      onClick={() => handleToggleShowOnWebsite(brand)}
-                      className="data-[state=checked]:bg-green-500"
-                    />
-                  </TableCell>
-                  <TableCell>{brand.slug}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreHorizontalIcon />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {brands.data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    No brands found.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                brands.data.map((brand) => (
+                  <TableRow key={brand.slug} className="group hover:bg-muted/50 transition-colors">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <BrandLogo logo={brand.logo} name={brand.name} />
+                        <span className="font-medium">{brand.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={brand.show_on_website}
+                        onClick={() => handleToggleShowOnWebsite(brand)}
+                        className="data-[state=checked]:bg-green-500"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm font-mono">{brand.slug}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8">
+                            <MoreHorizontalIcon />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(brand)}>
+                            <Pencil className="size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem variant="destructive" onClick={() => setDeletingBrand(brand)}>
+                            <Trash2 className="size-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
+          </div>
         )}
 
         {/* Pagination — just pass filters directly */}
@@ -175,6 +249,80 @@ export default function Brands({ brands }: { brands: PaginatedBrands }) {
           filters={filters}
         />
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingBrand} onOpenChange={(open) => !open && setEditingBrand(null)}>
+        <DialogContent>
+          <form onSubmit={handleUpdateSubmit}>
+            <DialogHeader>
+              <DialogTitle>Edit Brand</DialogTitle>
+              <DialogDescription>
+                Update the brand details below.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  placeholder="Brand name"
+                  required
+                />
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-md border bg-muted/50">
+                <Switch
+                  id="show_on_website"
+                  checked={editForm.show_on_website}
+                  onCheckedChange={(checked) => setEditForm({ ...editForm, show_on_website: checked })}
+                />
+                <Label htmlFor="show_on_website" className="cursor-pointer font-normal">Show on website</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditingBrand(null)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Spinner className="size-4" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save changes'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Alert Dialog */}
+      <AlertDialog open={!!deletingBrand} onOpenChange={(open) => !open && setDeletingBrand(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{deletingBrand?.name}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Spinner className="size-4" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
