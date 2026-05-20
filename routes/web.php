@@ -12,6 +12,7 @@ Route::prefix(config('app.admin_url', 'admin'))->middleware(['auth', 'verified']
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
     Route::inertia('support', 'support/index')->name('support');
     Route::get('brands', [BrandController::class, 'index'])->name('brands.index');
+    Route::post('brands/{brand}/toggle-show-on-website', [BrandController::class, 'toggleShowOnWebsite'])->name('brands.toggle-show-on-website');
 });
 
 require __DIR__.'/settings.php';

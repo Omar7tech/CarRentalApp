@@ -25,6 +25,7 @@ export interface Brand {
   name: string;
   slug: string;
   logo: string;
+  show_on_website: boolean;
 }
 
 export type PaginatedBrands = PaginatedResponse<Brand>;

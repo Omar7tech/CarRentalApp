@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { PaginatedResponse } from '@/types/index.d';
-import { Link } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
@@ -21,10 +21,7 @@ const paginationVariants = cva(
                 icon: 'h-9 w-9',
             },
         },
-        defaultVariants: {
-            variant: 'default',
-            size: 'default',
-        },
+        defaultVariants: { variant: 'default', size: 'default' },
     },
 );
 
@@ -37,9 +34,7 @@ const activePageVariants = cva('pointer-events-none', {
             simple: 'font-bold underline',
         },
     },
-    defaultVariants: {
-        variant: 'default',
-    },
+    defaultVariants: { variant: 'default' },
 });
 
 interface DataPaginationProps<T> extends VariantProps<typeof paginationVariants> {
@@ -47,6 +42,8 @@ interface DataPaginationProps<T> extends VariantProps<typeof paginationVariants>
     className?: string;
     showFirstLast?: boolean;
     showInfo?: boolean;
+    filters?: Record<string, any>;   // pass your useTableFilters().filters here
+    only?: string[];
 }
 
 function buildPageUrl(baseUrl: string, page: number): string {
@@ -61,12 +58,7 @@ function buildPageUrl(baseUrl: string, page: number): string {
 
 function isValidUrl(url: string | null | undefined): url is string {
     if (!url) return false;
-    try {
-        new URL(url);
-        return true;
-    } catch {
-        return false;
-    }
+    try { new URL(url); return true; } catch { return false; }
 }
 
 export function DataPagination<T>({
@@ -75,6 +67,8 @@ export function DataPagination<T>({
     className,
     showFirstLast = false,
     showInfo = true,
+    filters,
+    only,
 }: DataPaginationProps<T>) {
     if (!data?.meta || !data?.links) return null;
 
@@ -83,29 +77,69 @@ export function DataPagination<T>({
 
     if (!last_page || last_page <= 1) return null;
 
-    const pages = Array.from({ length: last_page }, (_, i) => i + 1);
-
     const getPageUrl = (page: number): string | null => {
         const base = first ?? last ?? next ?? prev;
         return base ? buildPageUrl(base, page) : null;
     };
 
+    function navigate(url: string) {
+        const destination = new URL(url);
+
+        // Re-inject active filters so they survive page navigation
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && value !== '' && value !== false) {
+                    destination.searchParams.set(`filter[${key}]`, String(value));
+                }
+            });
+        }
+
+        router.get(destination.toString(), {}, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: only ?? [],
+            showProgress: false,
+        });
+    }
+
     const getVisiblePages = (): (number | 'ellipsis')[] => {
+        const pages = Array.from({ length: last_page }, (_, i) => i + 1);
         if (last_page <= 7) return pages;
 
         const result: (number | 'ellipsis')[] = [1];
-
         if (current_page > 3) result.push('ellipsis');
-
-        for (let i = Math.max(2, current_page - 1); i <= Math.min(last_page - 1, current_page + 1); i++) {
-            result.push(i);
-        }
-
+        for (let i = Math.max(2, current_page - 1); i <= Math.min(last_page - 1, current_page + 1); i++) result.push(i);
         if (current_page < last_page - 2) result.push('ellipsis');
-
         result.push(last_page);
-
         return result;
+    };
+
+    const NavButton = ({
+        url,
+        label,
+        children,
+        hideOnMobile = false,
+    }: {
+        url: string | null | undefined;
+        label: string;
+        children: React.ReactNode;
+        hideOnMobile?: boolean;
+    }) => {
+        const disabled = !isValidUrl(url);
+        return disabled ? (
+            <span className={cn(paginationVariants({ variant, size: 'icon' }), 'cursor-not-allowed opacity-50', hideOnMobile && 'hidden sm:inline-flex')}>
+                {children}
+            </span>
+        ) : (
+            <button
+                onClick={() => navigate(url!)}
+                aria-label={label}
+                className={cn(paginationVariants({ variant, size: variant === 'simple' ? 'default' : 'icon' }), 'touch-manipulation', hideOnMobile && 'hidden sm:inline-flex')}
+            >
+                {children}
+            </button>
+        );
     };
 
     return (
@@ -117,47 +151,27 @@ export function DataPagination<T>({
                         <span className="font-medium">{to}</span> of{' '}
                         <span className="font-medium">{total}</span> results
                     </span>
-                    <span className="sm:hidden">
-                        {from}–{to} of {total}
-                    </span>
+                    <span className="sm:hidden">{from}–{to} of {total}</span>
                 </div>
             )}
 
             <nav className="flex items-center justify-center gap-0.5 sm:gap-1" aria-label="Pagination">
-                {showFirstLast && isValidUrl(first) && current_page > 1 && (
-                    <Link
-                        href={buildPageUrl(first, 1)}
-                        className={cn(paginationVariants({ variant, size: 'icon' }), 'hidden sm:inline-flex')}
-                        aria-label="Go to first page"
-                    >
+                {showFirstLast && (
+                    <NavButton url={current_page > 1 ? first : null} label="Go to first page" hideOnMobile>
                         <ChevronsLeft className="h-4 w-4" />
-                    </Link>
+                    </NavButton>
                 )}
 
-                {isValidUrl(prev) ? (
-                    <Link
-                        href={prev}
-                        className={cn(paginationVariants({ variant, size: variant === 'simple' ? 'default' : 'icon' }), 'touch-manipulation')}
-                        aria-label="Go to previous page"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        {variant === 'simple' && <span className="hidden sm:inline">Previous</span>}
-                    </Link>
-                ) : (
-                    <span className={cn(paginationVariants({ variant, size: 'icon' }), 'cursor-not-allowed opacity-50')}>
-                        <ChevronLeft className="h-4 w-4" />
-                    </span>
-                )}
+                <NavButton url={prev} label="Go to previous page">
+                    <ChevronLeft className="h-4 w-4" />
+                    {variant === 'simple' && <span className="hidden sm:inline">Previous</span>}
+                </NavButton>
 
                 <div className="flex items-center gap-0.5 sm:gap-1">
                     {getVisiblePages().map((page, index) => {
                         if (page === 'ellipsis') {
                             return (
-                                <span
-                                    key={`ellipsis-${index}`}
-                                    className="hidden h-9 w-9 items-center justify-center text-muted-foreground sm:flex"
-                                    aria-hidden="true"
-                                >
+                                <span key={`ellipsis-${index}`} className="hidden h-9 w-9 items-center justify-center text-muted-foreground sm:flex" aria-hidden="true">
                                     …
                                 </span>
                             );
@@ -166,52 +180,36 @@ export function DataPagination<T>({
                         const pageUrl = getPageUrl(page);
                         const isActive = page === current_page;
                         const isNearCurrent = Math.abs(page - current_page) <= 1;
-                        const shouldShowOnMobile = isActive || isNearCurrent;
-
                         if (!pageUrl) return null;
 
                         return (
-                            <Link
+                            <button
                                 key={`page-${page}`}
-                                href={pageUrl}
+                                onClick={() => navigate(pageUrl)}
                                 aria-current={isActive ? 'page' : undefined}
                                 aria-label={`Go to page ${page}`}
                                 className={cn(
                                     paginationVariants({ variant, size: 'icon' }),
                                     isActive && activePageVariants({ variant }),
                                     'touch-manipulation',
-                                    !shouldShowOnMobile && 'hidden sm:inline-flex',
+                                    !isActive && !isNearCurrent && 'hidden sm:inline-flex',
                                 )}
                             >
                                 {page}
-                            </Link>
+                            </button>
                         );
                     })}
                 </div>
 
-                {isValidUrl(next) ? (
-                    <Link
-                        href={next}
-                        className={cn(paginationVariants({ variant, size: variant === 'simple' ? 'default' : 'icon' }), 'touch-manipulation')}
-                        aria-label="Go to next page"
-                    >
-                        {variant === 'simple' && <span className="hidden sm:inline">Next</span>}
-                        <ChevronRight className="h-4 w-4" />
-                    </Link>
-                ) : (
-                    <span className={cn(paginationVariants({ variant, size: 'icon' }), 'cursor-not-allowed opacity-50')}>
-                        <ChevronRight className="h-4 w-4" />
-                    </span>
-                )}
+                <NavButton url={next} label="Go to next page">
+                    {variant === 'simple' && <span className="hidden sm:inline">Next</span>}
+                    <ChevronRight className="h-4 w-4" />
+                </NavButton>
 
-                {showFirstLast && isValidUrl(last) && current_page < last_page && (
-                    <Link
-                        href={buildPageUrl(last, last_page)}
-                        className={cn(paginationVariants({ variant, size: 'icon' }), 'hidden sm:inline-flex')}
-                        aria-label="Go to last page"
-                    >
+                {showFirstLast && (
+                    <NavButton url={current_page < last_page ? last : null} label="Go to last page" hideOnMobile>
                         <ChevronsRight className="h-4 w-4" />
-                    </Link>
+                    </NavButton>
                 )}
             </nav>
         </div>

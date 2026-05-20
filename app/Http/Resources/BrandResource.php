@@ -18,6 +18,7 @@ class BrandResource extends JsonResource
             'name' => (string) $this->name,
             'slug' => (string) $this->slug,
             'logo' => (string) "https://www.carlogos.org/car-logos/" . $this->slug . "-logo.png",
+            'show_on_website' => (bool) $this->show_on_website,
         ];
     }
 }

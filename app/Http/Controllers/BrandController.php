@@ -7,6 +7,7 @@ use App\Http\Resources\BrandResource;
 use App\Models\Brand;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class BrandController extends Controller
 {
@@ -15,7 +16,9 @@ class BrandController extends Controller
      */
     public function index()
     {
-        $brands = Brand::paginate(10);
+        $brands = QueryBuilder::for(Brand::class)
+            ->allowedFilters('name', 'show_on_website')
+            ->paginate(10);
         return Inertia::render('brands/index', [
             'brands' => BrandResource::collection($brands),
         ]);
@@ -67,5 +70,14 @@ class BrandController extends Controller
     public function destroy(Brand $brand)
     {
         //
+    }
+
+    public function toggleShowOnWebsite(Brand $brand)
+    {
+        $brand->update([
+            'show_on_website' => !$brand->show_on_website,
+        ]);
+
+        return back();
     }
 }
